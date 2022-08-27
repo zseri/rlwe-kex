@@ -5,28 +5,26 @@ n = 1024
 q = 2**32-1
 hlpr = [1] + [0] * (n-1) + [1]
 
+def bool_to_int(b): return (1 if b else 0)
+def norm_poly(q,poly): return np.floor(p.polydiv(poly,hlpr)[1])%q
+
 def gen_poly(n,q):
     l = 0 #Gamma Distribution Location (Mean "center" of dist.)
     while True:
-        poly = np.floor(np.random.normal(l,size=(n)))
-        poly = np.floor(p.polydiv(poly,hlpr)[1]%q)
+        poly = norm_poly(q, np.floor(np.random.normal(l,size=(n))))
         if len(poly) == n:
             return poly
-
-def bool_to_int(b):
-    return (1 if b else 0)
 
 def gen_seb(n, q, A):
     s = gen_poly(n, q)
     e = gen_poly(n, q)
     b = p.polymul(A,s)%q
-    b = np.floor(p.polydiv(s,hlpr)[1])
     b = p.polyadd(b,e)%q
+    b = np.floor(p.polydiv(s,hlpr)[1])
     return s, e, b
 
 def compute_shared(u, sC, bD):
-    shared = np.floor(p.polymul(sC,bD)%q)
-    shared = np.floor(p.polydiv(shared,hlpr)[1])%q
+    shared = norm_poly(q, np.floor(p.polymul(sC,bD)%q))
 
     for i, ui in enumerate(iter(u)):
         # Region 0 (0 --- q/4 and q/2 --- 3q/4)

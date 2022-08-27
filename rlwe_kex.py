@@ -48,6 +48,9 @@ sA, eA, bA = gen_seb(n, q, A)
 #Bob
 sB, eB, bB = gen_seb(n, q, A)
 
+# Adversary: Eve
+sE, eE, bE = gen_seb(n, q, A)
+
 #Error Rounding
 #--Bob
 u = np.asarray([False] * n)
@@ -67,6 +70,11 @@ while (i < len(u)):
 sharedAlice = compute_shared(u, sA, bB)
 sharedBob   = compute_shared(u, sB, bA)
 
+# Adversary: Eve
+# Eve is MITM, can access only (bA, u)
+sharedEve   = compute_shared(u, sE, bA)
+
+
 print("A:",len(A),"|",A)
 print("\n-Alice---")
 print(" s:",len(sA),"|",sA)
@@ -77,13 +85,20 @@ print(" s':",len(sB),"|",sB)
 print(" e':",len(eB),"|",eB)
 print(" b':",len(bB),"|",bB)
 print(" u :",len(u),"|",u)
+print("\n-Eve---")
+print(" s':",len(sB),"|",sE)
+print(" e':",len(eB),"|",eE)
+print(" b':",len(bB),"|",bE)
 print("\n")
 print("Shared Secret Alice:",len(sharedAlice),"|",sharedAlice)
 print("Shared Secret Bob:",len(sharedBob),"|",sharedBob)
+print("Shared Secret Eve:",len(sharedEve),"|",sharedEve)
 
 print("\n\n--Verification--")
 i = 0
 while (i < len(sharedBob)):
     if (sharedAlice[i] != sharedBob[i]):
         print("Error at index",i)
+    if (sharedAlice[i] != sharedEve[i]):
+        print("Adv.Error at index", i)
     i+=1

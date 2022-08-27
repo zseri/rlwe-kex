@@ -1,12 +1,17 @@
 import numpy as np
 from numpy.polynomial import polynomial as p
+import sys
 
 n = 1024
 q = 2**32-1
 hlpr = [1] + [0] * (n-1) + [1]
 
 def bool_to_int(b): return (1 if b else 0)
-def norm_poly(q,poly): return np.floor(p.polydiv(poly,hlpr)[1])%q
+def norm_poly(q,poly):
+    # this is not exactly correct, as we should take the modulo uniformly,
+    # but that doesn't work as expected...
+    ret = p.polydiv(np.int_(poly),hlpr)[1]
+    return ret
 
 def gen_poly(n,q):
     l = 0 #Gamma Distribution Location (Mean "center" of dist.)
@@ -18,26 +23,41 @@ def gen_poly(n,q):
 def gen_seb(n, q, A):
     s = gen_poly(n, q)
     e = gen_poly(n, q)
-    b = p.polymul(A,s)%q
-    b = p.polyadd(b,e)%q
-    b = np.floor(p.polydiv(s,hlpr)[1])
+    b = norm_poly(q,p.polyadd(p.polymul(A,s),e))
     return s, e, b
 
+def compute_u(b):
+    u = np.asarray([False] * n)
+    q2 = q/2
+    q4 = q/4
+    for i in range(0,n):
+        if len(b) <= i: break
+        bi = b[i] % q
+        if bi < q4: u[i] = False
+        elif bi < q2: u[i] = True
+        elif bi < 3*q4: u[i] = False
+        elif bi < q: u[i] = True
+        else:
+            print("FATAL ERROR@compute_u: ", bi, " > ", q)
+            sys.exit()
+    return u
+
 def compute_shared(u, sC, bD):
-    shared = norm_poly(q, np.floor(p.polymul(sC,bD)%q))
+    shared = norm_poly(q, p.polymul(sC,bD))
 
     for i, ui in enumerate(iter(u)):
         # Region 0 (0 --- q/4 and q/2 --- 3q/4)
         if not ui:
             shared[i] = bool_to_int(shared[i] >= q*0.125 and shared[i] < q*0.625)
+        # Region 1 (q/4 --- q/2 and 3q/4 --- q)
         else:
             shared[i] = 1 - bool_to_int(shared[i] >= q*0.875 and shared[i] < q*0.375)
 
     return shared
 
 #Generate A
-A = np.floor(np.random.random(size=(n))*q)%q
-A = np.floor(p.polydiv(A,hlpr)[1])
+A = np.random.random(size=(n))*q
+A = norm_poly(q,A)
 
 #Alice (Secret & Error)
 sA, eA, bA = gen_seb(n, q, A)
@@ -49,19 +69,7 @@ sB, eB, bB = gen_seb(n, q, A)
 sE, eE, bE = gen_seb(n, q, A)
 
 #Error Rounding
-#--Bob
-u = np.asarray([False] * n)
-i = 0
-
-while (i < len(u)):
-    if (len(bB) <= i): break;
-    if (int(bB[i]/(q/4)) == 0): u[i] = False
-    elif (int(bB[i]/(q/2)) == 0): u[i] = True
-    elif (int(bB[i]/(3*q/4)) == 0): u[i] = False
-    elif (int(bB[i]/(q)) == 0): u[i] = True
-    else:
-        print("error! (1)")
-    i+=1
+u = compute_u(bB)
 
 # shared secret + rounding
 sharedAlice = compute_shared(u, sA, bB)

@@ -6,13 +6,12 @@ q = 2**32-1
 hlpr = [1] + [0] * (n-1) + [1]
 
 def gen_poly(n,q):
-    global hlpr
     l = 0 #Gamma Distribution Location (Mean "center" of dist.)
-    poly = np.floor(np.random.normal(l,size=(n)))
-    while (len(poly) != n):
+    while True:
         poly = np.floor(np.random.normal(l,size=(n)))
         poly = np.floor(p.polydiv(poly,hlpr)[1]%q)
-    return poly
+        if len(poly) == n:
+            return poly
 
 def bool_to_int(b):
     return (1 if b else 0)
